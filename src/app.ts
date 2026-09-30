@@ -1,48 +1,50 @@
 import express from "express";
 import type { Express, Request, Response } from "express";
-import {z} from "zod";
+import fs from "fs";
 
 const app: Express = express();
-const PORT: number = 8081;
+const PORT: number = 4041;
+
+const DIR = "./dados";
+const FILE = `${DIR}/cadastros.json`;
+
+if (!fs.existsSync(FILE)) {
+fs.mkdirSync(DIR, { recursive: true });
+
+fs.writeFileSync(FILE, `[]`, "utf-8");
+
+}
 
 app.use(express.json());
 
-const createProdutoShema = z.object({
-    nomeProduto: z.string().min(3),
-    precoProduto: z.coerce.number().positive()
-});
-
-type Produto ={
-    id: string,
-    nome: string,
-    preco: number
+type Chamado = {
+id: string,
+nomeCliente: string,
+descricaoProblema: string,
+prioridade: "Baixa" | "Média" | "Alta",
+status: "Aberto" | "Em Atendimento" | "Concluído"
 }
 
-app.post("/produtos", (req: Request, res: Response)=>{
-    try {
-        
-        const {nomeProduto, precoProduto} = createProdutoShema.parse(req.body);
+app.get("/cadastros", (req: Request, res: Response) => {
+try {
 
-        res.status(201).json({
-            message: `Produto ${nomeProduto} - R$ ${precoProduto} foi criado com sucesso!`
-        });
+    const data: string = fs.readFileSync(FILE, "utf-8");
+    const cadastros: Chamado[] = JSON.parse(data);
 
-    } catch (error) {
-        
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                erro: "Os parâmetros enviados são inválidos"
-            })
-        }
+    res.status(200).json(cadastros);
 
-        console.error("Erro ao salvar o produto:", error);
-        res.status(500).json({
-            erro: "Erro interno no servidor ao cadastrar produto"
-        });
+} catch (error) {
 
-    }
+    console.error("erro ao buscar os cadastros:", error);
+
+    res.status(500).json({
+        erro: "erro interno no servidor ao buscar os cadastros!"
+    });
+
+}
+
 });
 
-app.listen(PORT, ()=>{
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
+app.listen(PORT, () => {
+console.log(`Servidor rodando em <http://localhost>:${PORT}`);
 });
